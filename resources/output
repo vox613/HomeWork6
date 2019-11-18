@@ -8,7 +8,7 @@
 0  0  0  0  0  0  0  0  0  0  
 0  0  0  0  0  0  0  0  0  0  
 0  0  0  0  0  0  0  0  0  0  
-singleThreadCompute time = 22
+singleThreadCompute time = 21
 0  0  0  0  0  0  0  0  0  0  
 0  0  0  0  0  1  0  0  0  0  
 0  0  0  0  1  0  1  0  0  0  
@@ -19,4 +19,4 @@ singleThreadCompute time = 22
 0  0  0  0  0  0  0  0  0  0  
 0  0  0  0  0  0  0  0  0  0  
 0  0  0  0  0  0  0  0  0  0  
-multiThreadCompute time = 15
+multiThreadCompute time = 16
