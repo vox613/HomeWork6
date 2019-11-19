@@ -9,6 +9,7 @@ import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
+
 /**
  * The main class of the "Game of Life" program. Implemented one and multi-threaded version of the game.
  * The program accepts the initial state of the field from the file as an input or randomly generates a field
@@ -27,6 +28,9 @@ public class GameOfLive implements Runnable {
     private byte[][] tempo;
     private final boolean randomFieldGenerate;
     private final String outputFile;
+    private long multiThreadTime = 0;
+    private long singleThreadTime = 0;
+
 
     /**
      * The class constructor takes as arguments the number of iterations of the calculation, the size of the field and
@@ -66,7 +70,7 @@ public class GameOfLive implements Runnable {
      * @param ITERATIONS_NUM - number of iterations of field recalculation. The number is greater than 0,
      *                       otherwise the default number of iterations will be set to 10.
      */
-    public GameOfLive(String filePath, String outputFile, String ITERATIONS_NUM) {
+    GameOfLive(String filePath, String outputFile, String ITERATIONS_NUM) {
         readFile(filePath);
         this.ITERATIONS_NUM = (Integer.parseInt(ITERATIONS_NUM) > 0) ? Integer.parseInt(ITERATIONS_NUM) : 10;
 
@@ -87,10 +91,13 @@ public class GameOfLive implements Runnable {
     @Override
     public void run() {
         fillRandomField();
-        byteArrayCopy(lifeGeneration, tempo);
         singleThreadCompute();
         resetCounterAndFields();
-        multiThreadCompute();
+        try {
+            multiThreadCompute();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -98,14 +105,15 @@ public class GameOfLive implements Runnable {
      * Multithreaded calculation of the state of the field. The original field is divided into 4 parts and
      * each is processed by a separate thread.
      */
-    private void multiThreadCompute() {
+    private void multiThreadCompute() throws InterruptedException {
         long currentTime = System.currentTimeMillis();
         CyclicBarrier barrier = new CyclicBarrier(4, () -> {
             for (int x = 0; x < FIELD_SIZE; x++) {
                 System.arraycopy(nextGeneration[x], 0, lifeGeneration[x], 0, FIELD_SIZE);
             }
             if (counter == ITERATIONS_NUM - 1) {
-                String timeCompute = "multiThreadCompute time = " + (System.currentTimeMillis() - currentTime);
+                multiThreadTime = System.currentTimeMillis() - currentTime;
+                String timeCompute = "multiThreadCompute time = " + multiThreadTime;
                 System.out.println(timeCompute);
                 printField();
                 writeResultToFile(true, timeCompute);
@@ -174,6 +182,11 @@ public class GameOfLive implements Runnable {
         thread3.start();
         thread4.start();
 
+        thread1.join();
+        thread2.join();
+        thread3.join();
+        thread4.join();
+
 
         //  Maybe such a record is better?
 
@@ -199,7 +212,7 @@ public class GameOfLive implements Runnable {
     /**
      * Single-threaded calculation of the state of the field.
      */
-    private void singleThreadCompute() {
+    private long singleThreadCompute() {
         long currentTime = System.currentTimeMillis();
         ExecuteClass singleThreadExecute = new ExecuteClass(0, 0, FIELD_SIZE, FIELD_SIZE);
         while (counter < ITERATIONS_NUM) {
@@ -209,10 +222,12 @@ public class GameOfLive implements Runnable {
             }
             counter++;
         }
+        singleThreadTime = System.currentTimeMillis() - currentTime;
         printField();
-        String timeCompute = "singleThreadCompute time = " + (System.currentTimeMillis() - currentTime);
+        String timeCompute = "singleThreadCompute time = " + singleThreadTime;
         writeResultToFile(false, timeCompute);
         System.out.println(timeCompute);
+        return singleThreadTime;
     }
 
 
@@ -292,6 +307,7 @@ public class GameOfLive implements Runnable {
             for (int i = 0; i < FIELD_SIZE; i++) {
                 for (int j = 0; j < FIELD_SIZE; j++) {
                     lifeGeneration[i][j] = (byte) (new Random().nextInt(2));
+                    tempo[i][j] = lifeGeneration[i][j];
                 }
             }
         }
@@ -359,9 +375,30 @@ public class GameOfLive implements Runnable {
 
     private void resetCounterAndFields() {
         counter = 0;
+        multiThreadTime = 0;
+        singleThreadTime = 0;
         byteArrayCopy(tempo, lifeGeneration);
         nextGeneration = new byte[FIELD_SIZE][FIELD_SIZE];
     }
+
+
+    long getSingleThreadGameTime() {
+        fillRandomField();
+        resetCounterAndFields();
+        return singleThreadCompute();
+    }
+
+    long getMultiThreadGameTime() throws InterruptedException {
+        fillRandomField();
+        resetCounterAndFields();
+        multiThreadCompute();
+        return multiThreadTime;
+    }
+
+    byte[][] getFinalMatrix() {
+        return lifeGeneration;
+    }
+
 
     private void byteArrayCopy(byte[][] from, byte[][] to) {
         for (int x = 0; x < FIELD_SIZE; x++) {
